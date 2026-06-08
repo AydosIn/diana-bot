@@ -1,0 +1,1 @@
+"""Diana Telegram bot package."""
