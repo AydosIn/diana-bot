@@ -219,6 +219,19 @@ class MemoryStore:
         row = await cursor.fetchone()
         return row["role"] if row else None
 
+    async def count_user_messages_since(self, telegram_user_id: int, since_iso: str) -> int:
+        """Count how many messages a user sent since the given ISO timestamp."""
+        db = await self._get_db()
+        cursor = await db.execute(
+            """
+            SELECT COUNT(*) as cnt FROM messages
+            WHERE telegram_user_id = ? AND role = 'user' AND created_at >= ?
+            """,
+            (telegram_user_id, since_iso),
+        )
+        row = await cursor.fetchone()
+        return row["cnt"] if row else 0
+
     async def get_all_user_ids(self) -> list[int]:
         db = await self._get_db()
         cursor = await db.execute("SELECT telegram_user_id FROM users")

@@ -55,6 +55,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await memory.add_message(user.id, "assistant", "hey")
         return
 
+    # Daily rate limit check.
+    daily_limit = context.application.bot_data.get("daily_message_limit", 50)
+    if daily_limit > 0:
+        from datetime import datetime, timedelta, timezone
+        since = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+        count = await memory.count_user_messages_since(user.id, since)
+        if count >= daily_limit:
+            await _send_with_delay(
+                context, update.effective_chat.id, message,
+                "hey i need a break. talk to me tomorrow yeah?"
+            )
+            return
+
     history = await memory.get_recent_messages(telegram_user_id=user.id, limit=max_history)
     user_facts = await memory.get_user_facts(user.id)
 

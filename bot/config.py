@@ -17,6 +17,7 @@ class Settings:
     max_history_messages: int
     persona_path: Path
     allowed_user_ids: set[int]
+    daily_message_limit: int
 
 
 def load_settings() -> Settings:
@@ -46,4 +47,5 @@ def load_settings() -> Settings:
         max_history_messages=int(os.getenv("MAX_HISTORY_MESSAGES", "20")),
         persona_path=BASE_DIR / "diana_persona.md",
         allowed_user_ids=allowed_user_ids,
+        daily_message_limit=int(os.getenv("DAILY_MESSAGE_LIMIT", "50")),
     )

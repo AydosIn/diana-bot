@@ -51,6 +51,7 @@ def build_application() -> Application:
     application.bot_data["diana"] = diana
     application.bot_data["max_history_messages"] = settings.max_history_messages
     application.bot_data["allowed_user_ids"] = settings.allowed_user_ids
+    application.bot_data["daily_message_limit"] = settings.daily_message_limit
 
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     application.add_handler(MessageHandler(~filters.TEXT, handle_unsupported))
