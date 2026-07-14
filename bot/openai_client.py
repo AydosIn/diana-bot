@@ -86,7 +86,7 @@ class DianaClient:
             "frequency_penalty": 0.6,
             "presence_penalty": 0.4,
         }
-        request_kwargs.update(self._token_limit_kwargs(self.model, 280))
+        request_kwargs.update(self._token_limit_kwargs(self.model, 400))
 
         response = await self.client.chat.completions.create(**request_kwargs)
 

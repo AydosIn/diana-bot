@@ -16,6 +16,7 @@ class Settings:
     database_path: Path
     max_history_messages: int
     persona_path: Path
+    allowed_user_ids: set[int]
 
 
 def load_settings() -> Settings:
@@ -34,6 +35,9 @@ def load_settings() -> Settings:
     if not database_path.is_absolute():
         database_path = BASE_DIR / database_path
 
+    raw_ids = os.getenv("ALLOWED_USER_IDS", "").strip()
+    allowed_user_ids = {int(x) for x in raw_ids.replace(" ", "").split(",") if x}
+
     return Settings(
         telegram_bot_token=telegram_bot_token,
         openai_api_key=openai_api_key,
@@ -41,4 +45,5 @@ def load_settings() -> Settings:
         database_path=database_path,
         max_history_messages=int(os.getenv("MAX_HISTORY_MESSAGES", "20")),
         persona_path=BASE_DIR / "diana_persona.md",
+        allowed_user_ids=allowed_user_ids,
     )

@@ -25,6 +25,11 @@ async def post_init(application: Application) -> None:
     asyncio.create_task(proactive_loop(application))
 
 
+async def post_shutdown(application: Application) -> None:
+    memory = application.bot_data["memory"]
+    await memory.close()
+
+
 def build_application() -> Application:
     settings = load_settings()
 
@@ -39,13 +44,15 @@ def build_application() -> Application:
         Application.builder()
         .token(settings.telegram_bot_token)
         .post_init(post_init)
+        .post_shutdown(post_shutdown)
         .build()
     )
     application.bot_data["memory"] = memory
     application.bot_data["diana"] = diana
     application.bot_data["max_history_messages"] = settings.max_history_messages
+    application.bot_data["allowed_user_ids"] = settings.allowed_user_ids
 
-    application.add_handler(MessageHandler(filters.TEXT, handle_message))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     application.add_handler(MessageHandler(~filters.TEXT, handle_unsupported))
 
     return application

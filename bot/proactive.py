@@ -57,13 +57,20 @@ async def _check_and_ping(application: Application) -> None:
         if last_dt.tzinfo is None:
             last_dt = last_dt.replace(tzinfo=timezone.utc)
 
-        if last_dt < threshold:
-            starter = random.choice(_CONVERSATION_STARTERS)
-            try:
-                await application.bot.send_message(chat_id=user_id, text=starter)
-                await memory.add_message(user_id, "assistant", starter)
-                logger.info("Sent proactive message to user %s: %s", user_id, starter)
-                # Only ping once per cycle — avoid spamming multiple users in the same second
-                await asyncio.sleep(random.uniform(1.0, 3.0))
-            except Exception:
-                logger.warning("Could not send proactive message to user %s", user_id)
+        if last_dt >= threshold:
+            continue
+
+        # Don't ping again if Diana already messaged and the user hasn't replied.
+        last_role = await memory.get_last_message_role(user_id)
+        if last_role == "assistant":
+            continue
+
+        starter = random.choice(_CONVERSATION_STARTERS)
+        try:
+            await application.bot.send_message(chat_id=user_id, text=starter)
+            await memory.add_message(user_id, "assistant", starter)
+            logger.info("Sent proactive message to user %s: %s", user_id, starter)
+            # Only ping once per cycle — avoid spamming multiple users in the same second
+            await asyncio.sleep(random.uniform(1.0, 3.0))
+        except Exception:
+            logger.warning("Could not send proactive message to user %s", user_id)

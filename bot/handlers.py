@@ -30,6 +30,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     user = update.effective_user
+
+    allowed_ids = context.application.bot_data.get("allowed_user_ids")
+    if allowed_ids and user.id not in allowed_ids:
+        return
+
     text = message.text.strip()
     if not text:
         return
@@ -85,7 +90,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 await _send_with_delay(context, update.effective_chat.id, message, typo_part)
                 await asyncio.sleep(random.uniform(1.2, 2.5))
                 correction = _correction_for(part)
-                await message.reply_text(correction)
+                await _send_with_delay(context, update.effective_chat.id, message, correction)
             else:
                 await _send_with_delay(context, update.effective_chat.id, message, part)
 
