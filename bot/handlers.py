@@ -26,7 +26,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     message = update.effective_message
-    if message is None or message.text is None:
+    if message is None:
+        return
+    if message.text is None and not message.photo:
         return
 
     user = update.effective_user
@@ -35,9 +37,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if allowed_ids and user.id not in allowed_ids:
         return
 
-    text = message.text.strip()
-    if not text:
+    text = (message.text or message.caption or "").strip()
+    if not text and not message.photo:
         return
+
+    image_base64 = None
+    if message.photo:
+        import base64
+        photo_file = await message.photo[-1].get_file()
+        photo_bytes = await photo_file.download_as_bytearray()
+        image_base64 = base64.b64encode(photo_bytes).decode('utf-8')
+
+    memory_text = text if text else "[User sent an image]"
+    if message.photo and text:
+        memory_text = f"{text} [User sent an image]"
 
     memory = cast(MemoryStore, context.application.bot_data["memory"])
     diana = cast(DianaClient, context.application.bot_data["diana"])
@@ -71,12 +84,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     history = await memory.get_recent_messages(telegram_user_id=user.id, limit=max_history)
     user_facts = await memory.get_user_facts(user.id)
 
-    await memory.add_message(user.id, "user", text)
+    await memory.add_message(user.id, "user", memory_text)
 
     # ~30% chance Diana reacts to the message before typing.
     if random.random() < 0.30:
         asyncio.create_task(
-            _react_to_message(diana, context, update.effective_chat.id, message, text)
+            _react_to_message(diana, context, update.effective_chat.id, message, memory_text)
         )
 
     try:
@@ -84,6 +97,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             user_message=text,
             history=history,
             user_facts=user_facts,
+            image_base64=image_base64,
         )
     except Exception:
         logger.exception("OpenAI reply failed for user_id=%s", user.id)
@@ -91,9 +105,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     full_reply = " ".join(parts)
 
-    # ~20% chance Diana replies with a voice message (only when reply is long enough).
+    force_voice = False
+    if parts and parts[0].startswith("[voice]"):
+        force_voice = True
+        parts[0] = parts[0][7:].strip()
+        if not parts[0]:
+            parts.pop(0)
+        full_reply = " ".join(parts)
+        if not parts:
+            parts = ["idk"]
+            full_reply = "idk"
+
+    # ~20% chance Diana replies with a voice message naturally.
     total_words = len(full_reply.split())
-    if total_words >= 4 and random.random() < 0.20:
+    if force_voice or (total_words >= 4 and random.random() < 0.20):
         await _send_voice_reply(diana, context, update.effective_chat.id, message, full_reply)
     else:
         for i, part in enumerate(parts):
@@ -111,7 +136,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     # Extract and store new facts about the user in the background.
     asyncio.create_task(
-        _extract_and_store_facts(diana, memory, user.id, text, history, user_facts)
+        _extract_and_store_facts(diana, memory, user.id, memory_text, history, user_facts)
     )
 
 

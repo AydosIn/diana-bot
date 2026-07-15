@@ -73,16 +73,18 @@ class DianaClient:
         user_message: str,
         history: list[ChatMessage],
         user_facts: list[str],
+        image_base64: str | None = None,
     ) -> list[str]:
         messages = self._build_messages(
             user_message=user_message,
             history=history,
             user_facts=user_facts,
+            image_base64=image_base64,
         )
         request_kwargs: dict = {
             "model": self.model,
             "messages": messages,
-            "temperature": 0.9,
+            "temperature": 1.1,
             "frequency_penalty": 0.6,
             "presence_penalty": 0.4,
         }
@@ -183,7 +185,8 @@ class DianaClient:
         user_message: str,
         history: list[ChatMessage],
         user_facts: list[str],
-    ) -> list[dict[str, str]]:
+        image_base64: str | None = None,
+    ) -> list[dict]:
         persona_template = self.persona_path.read_text(encoding="utf-8").strip()
 
         if user_facts:
@@ -196,7 +199,19 @@ class DianaClient:
         messages = [{"role": "system", "content": persona}]
         for item in history:
             messages.append({"role": item.role, "content": item.content})
-        messages.append({"role": "user", "content": user_message})
+            
+        if image_base64:
+            content = []
+            if user_message:
+                content.append({"type": "text", "text": user_message})
+            content.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}
+            })
+            messages.append({"role": "user", "content": content})
+        else:
+            messages.append({"role": "user", "content": user_message})
+            
         return messages
 
     @staticmethod
