@@ -106,15 +106,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     full_reply = " ".join(parts)
 
     force_voice = False
-    if parts and parts[0].startswith("[voice]"):
+    if "[voice]" in full_reply:
         force_voice = True
-        parts[0] = parts[0][7:].strip()
-        if not parts[0]:
-            parts.pop(0)
-        full_reply = " ".join(parts)
+        full_reply = full_reply.replace("[voice]", "").strip()
+        if not full_reply:
+            full_reply = "okay"
+        
+        # Clean parts just in case it falls through to text rendering
+        parts = [p.replace("[voice]", "").strip() for p in parts]
+        parts = [p for p in parts if p]
         if not parts:
-            parts = ["idk"]
-            full_reply = "idk"
+            parts = ["okay"]
 
     # ~20% chance Diana replies with a voice message naturally.
     total_words = len(full_reply.split())
